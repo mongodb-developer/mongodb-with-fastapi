@@ -9,8 +9,8 @@ run:
   command: uvicorn app:app --reload
   network:
     port: 8000
-  env: MY_APP_PORT
-    env:
-    - name: MONGODB_URI_SRV
-      value: mongodb+srv://test:test@test1.f31en.mongodb.net/myFirstDatabase?retryWrites=true&w=majority
+    env: MY_APP_PORT
+  env:
+  - name: MONGODB_URI_SRV
+    value: mongodb+srv://test:test@test1.f31en.mongodb.net/myFirstDatabase?retryWrites=true&w=majority
 
