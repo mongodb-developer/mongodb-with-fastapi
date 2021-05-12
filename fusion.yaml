@@ -6,10 +6,9 @@ build:
     - pip install -r requirements.txt
 run:
   runtime-version: 3.8
-  command: gunicorn app:app
+  command: uvicorn app:app
   network:
-    port: 8000
-    env: MY_APP_PORT
+    port: 80
   env:
   - name: MONGODB_URI_SRV
     value: mongodb+srv://test:test@test1.f31en.mongodb.net/myFirstDatabase?retryWrites=true&w=majority
