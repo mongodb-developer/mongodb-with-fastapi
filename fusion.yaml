@@ -1,0 +1,16 @@
+version: 1.0
+runtime: python3
+build:
+  commands:
+    build:
+    - python -m pip install -r requirements.txt
+run:
+  runtime-version: 3.8
+  command: uvicorn app:app --reload
+  network:
+    port: 8000
+  env: MY_APP_PORT
+    env:
+    - name: MONGODB_URI_SRV
+      value: mongodb+srv://test:test@test1.f31en.mongodb.net/myFirstDatabase?retryWrites=true&w=majority
+
