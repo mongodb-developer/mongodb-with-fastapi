@@ -6,9 +6,50 @@ from pydantic import BaseModel, Field, EmailStr
 from bson import ObjectId
 from typing import Optional, List
 import motor.motor_asyncio
+import warnings
+import sys
+from mangum import Mangum
+
+# Required environment variables:
+#   MONGODB_URI
+#   MONGODB_URI_SRV
+# Optional:
+#   MONGODB_USERNAME
+#   MONGODB_USERNAME
+uri = os.getenv("MONGODB_URI","<NOTSET>")
+uri_srv = os.getenv("MONGODB_URI_SRV","<NOTSET>")
+
+if ((uri=="<NOTSET>") and  (uri_srv=="<NOTSET>")):
+    warnings.warn("Did not detect MONGODB_URI or MONGODB_URI_SRV environment variables. Please set these and relaunc the app.")
+    warnings.warn(f"MONGODB_URI={uri}, MONGODB_URI_SRV={uri_srv}")
+    sys.exit(1)
+
+user = os.getenv("MONGODB_USERNAME","<NOTSET>")
+pwd = os.getenv("MONGODB_PASSWORD","<NOTSET>")
+
+print(f"uri:{uri}\nuri_srv:{uri_srv}\nuser:{user}")
 
 app = FastAPI()
-client = motor.motor_asyncio.AsyncIOMotorClient(os.environ["MONGODB_URL"])
+if not "<NOTSET>" in {user,pwd}:
+    try:
+        client = motor.motor_asyncio.AsyncIOMotorClient(uri_srv,username=user,password=pwd)
+    except Exception as err:
+        warnings.warn(f"ERROR: {err}")
+        if not uri == "<NOTSET>":
+            warnings.warn(f"srv connect error, attepting with MONGODB_URI:{uri}")
+            client = motor.motor_asyncio.AsyncIOMotorClient(uri,username=user,password=pwd)
+else:
+    warnings.warn("MONGODB_USERNAME or MONGODB_PASSWORD not set, using connection string only.")
+    try:
+        client = motor.motor_asyncio.AsyncIOMotorClient(uri_srv)
+    except Exception as err:
+        warnings.warn(f"ERROR: {err}")
+        if not uri == "<NOTSET>":
+            warnings.warn(f"srv connect error, attepting with MONGODB_URI:{uri}")
+            client = motor.motor_asyncio.AsyncIOMotorClient(uri)
+
+
+handler = Mangum(app)
 db = client.college
 
 
