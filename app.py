@@ -8,7 +8,8 @@ from typing import Optional, List
 import motor.motor_asyncio
 import warnings
 import sys
-from mangum import Mangum
+import uvicorn
+#from mangum import Mangum
 
 # Required environment variables:
 #   MONGODB_URI
@@ -61,7 +62,7 @@ else:
             client = motor.motor_asyncio.AsyncIOMotorClient(uri)
 
 
-handler = Mangum(app)
+#handler = Mangum(app)
 db = client.college
 
 
@@ -174,3 +175,8 @@ async def delete_student(id: str):
         return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
 
     raise HTTPException(status_code=404, detail=f"Student {id} not found")
+
+
+if __name__ == '__main__':
+    uvicorn.run(app, port=8080, host='0.0.0.0')
+
