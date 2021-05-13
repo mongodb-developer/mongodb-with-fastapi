@@ -6,6 +6,7 @@ build:
     - pip install -r requirements.txt
 run:
   command: python app.py
+  port: 8080
   env:
   - name: MONGODB_URI_SRV
     value: "mongodb+srv://test:test@test1.f31en.mongodb.net/myFirstDatabase?retryWrites=true&w=majority"
