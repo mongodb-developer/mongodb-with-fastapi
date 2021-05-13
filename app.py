@@ -132,7 +132,7 @@ async def create_student(student: StudentModel = Body(...)):
 
 @app.get("/", response_description="Student API HealthCheck")
 async def healthcheck():
-    json_compatible_item_data = jsonable_encoder( { "Status" : "OK", "Message" : "Be sure to drink your Ovaltine" } )
+    json_compatible_item_data = jsonable_encoder( { "Status": "OK", "Message": "Be sure to drink your Ovaltine", "Click": "<a href=\"docs\">docs</a>" } )
     return JSONResponse(content=json_compatible_item_data)
 
 @app.get(
