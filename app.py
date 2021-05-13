@@ -130,8 +130,13 @@ async def create_student(student: StudentModel = Body(...)):
     return JSONResponse(status_code=status.HTTP_201_CREATED, content=created_student)
 
 
+@app.get("/", response_description="Student API HealthCheck")
+async def healthcheck():
+    json_compatible_item_data = jsonable_encoder( { "Status" : "OK", "Message" : "Be sure to drink your Ovaltine" } )
+    return JSONResponse(content=json_compatible_item_data)
+
 @app.get(
-    "/", response_description="List all students", response_model=List[StudentModel]
+    "/students", response_description="List all students", response_model=List[StudentModel]
 )
 async def list_students():
     students = await db["students"].find().to_list(1000)
