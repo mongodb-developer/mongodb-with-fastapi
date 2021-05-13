@@ -16,18 +16,30 @@ from mangum import Mangum
 # Optional:
 #   MONGODB_USERNAME
 #   MONGODB_USERNAME
+url = os.getenv("MONGODB_URL","<NOTSET>")
 uri = os.getenv("MONGODB_URI","<NOTSET>")
 uri_srv = os.getenv("MONGODB_URI_SRV","<NOTSET>")
 
 if ((uri=="<NOTSET>") and  (uri_srv=="<NOTSET>")):
-    warnings.warn("Did not detect MONGODB_URI or MONGODB_URI_SRV environment variables. Please set these and relaunc the app.")
-    warnings.warn(f"MONGODB_URI={uri}, MONGODB_URI_SRV={uri_srv}")
-    sys.exit(1)
+    warnings.warn("Did not detect MONGODB_URI or MONGODB_URI_SRV environment variables.")
+    if (url=="<NOTSET>"):
+        warnings.warn("Did not detect MONGODB_URL evironment variables.")
+        warnings.warn("Please set these and relaunc the app.")
+        warnings.warn(f"MONGODB_URI={uri}, MONGODB_URI_SRV={uri_srv}, MONOGDB_URL={url}")
+        sys.exit(1)
+    else:
+        # Fall back to URL
+        uri = url
+
+
+if (uri_srv=="<NOTSET>"):
+    warnings.warn("MONGODB_URI_SRV was not set.")
+    uri = uri_srv
 
 user = os.getenv("MONGODB_USERNAME","<NOTSET>")
 pwd = os.getenv("MONGODB_PASSWORD","<NOTSET>")
-
-print(f"uri:{uri}\nuri_srv:{uri_srv}\nuser:{user}")
+pwd_redact = "<NOTSET>" if (pwd == "<NOTSET>") else "*REDACTED*"
+print(f"uri:{uri}\nuri_srv:{uri_srv}\nuser:{user}\npwd:{pwd_redact}")
 
 app = FastAPI()
 if not "<NOTSET>" in {user,pwd}:
