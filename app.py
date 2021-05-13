@@ -6,10 +6,10 @@ from pydantic import BaseModel, Field, EmailStr
 from bson import ObjectId
 from typing import Optional, List
 import motor.motor_asyncio
+from motor.motor_asyncio import AsyncIOMotorClient,AsyncIOMotorDatabase
 import warnings
 import sys
 import uvicorn
-#from mangum import Mangum
 
 # Required environment variables:
 #   MONGODB_URI
@@ -17,6 +17,8 @@ import uvicorn
 # Optional:
 #   MONGODB_USERNAME
 #   MONGODB_USERNAME
+
+
 url = os.getenv("MONGODB_URL","<NOTSET>")
 uri = os.getenv("MONGODB_URI","<NOTSET>")
 uri_srv = os.getenv("MONGODB_URI_SRV","<NOTSET>")
@@ -42,28 +44,54 @@ pwd = os.getenv("MONGODB_PASSWORD","<NOTSET>")
 pwd_redact = "<NOTSET>" if (pwd == "<NOTSET>") else "*REDACTED*"
 print(f"uri:{uri}\nuri_srv:{uri_srv}\nuser:{user}\npwd:{pwd_redact}")
 
+
+class DataBase:
+    client: AsyncIOMotorClient = None
+    petDB = None
+
+
+db = DataBase()
+
+
+async def connect_to_mongo():
+    print("connecting to mongo...")
+    if not "<NOTSET>" in {user,pwd}:
+        try:
+            db.client = motor.motor_asyncio.AsyncIOMotorClient(uri_srv,username=user,password=pwd)
+        except Exception as err:
+            warnings.warn(f"ERROR: {err}")
+            if not uri == "<NOTSET>":
+                warnings.warn(f"srv connect error, attepting with MONGODB_URI:{uri}")
+                client = motor.motor_asyncio.AsyncIOMotorClient(uri,username=user,password=pwd)
+    else:
+        warnings.warn("MONGODB_USERNAME or MONGODB_PASSWORD not set, using connection string only.")
+        try:
+            db.client = motor.motor_asyncio.AsyncIOMotorClient(uri_srv)
+        except Exception as err:
+            warnings.warn(f"ERROR: {err}")
+            if not uri == "<NOTSET>":
+                warnings.warn(f"srv connect error, attepting with MONGODB_URI:{uri}")
+                client = motor.motor_asyncio.AsyncIOMotorClient(uri)
+    # get a collection
+    # Format db.<database_name>.<collection_name>
+    db.college = db.client.college
+    print("connected to tancho_ci_db/pet")
+
+
+async def close_mongo_connection():
+    print("closing connection...")
+    db.client.close()
+    print("closed connection")
+
+
+
 app = FastAPI()
-if not "<NOTSET>" in {user,pwd}:
-    try:
-        client = motor.motor_asyncio.AsyncIOMotorClient(uri_srv,username=user,password=pwd)
-    except Exception as err:
-        warnings.warn(f"ERROR: {err}")
-        if not uri == "<NOTSET>":
-            warnings.warn(f"srv connect error, attepting with MONGODB_URI:{uri}")
-            client = motor.motor_asyncio.AsyncIOMotorClient(uri,username=user,password=pwd)
-else:
-    warnings.warn("MONGODB_USERNAME or MONGODB_PASSWORD not set, using connection string only.")
-    try:
-        client = motor.motor_asyncio.AsyncIOMotorClient(uri_srv)
-    except Exception as err:
-        warnings.warn(f"ERROR: {err}")
-        if not uri == "<NOTSET>":
-            warnings.warn(f"srv connect error, attepting with MONGODB_URI:{uri}")
-            client = motor.motor_asyncio.AsyncIOMotorClient(uri)
+app.add_event_handler("startup", connect_to_mongo)
+app.add_event_handler("shutdown", close_mongo_connection)
+
 
 
 #handler = Mangum(app)
-db = client.college
 
 
 class PyObjectId(ObjectId):
@@ -139,7 +167,9 @@ async def healthcheck():
     "/students", response_description="List all students", response_model=List[StudentModel]
 )
 async def list_students():
-    students = await db["students"].find().to_list(1000)
+    students = await db.college["students"].find().to_list(1000)
+    #students = list(db["students"].find().limit(1000))
+    print(f"students={students}")
     return students
 
 
