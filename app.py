@@ -1,6 +1,5 @@
 import os
 from fastapi import FastAPI, Body, HTTPException, status
-from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field, EmailStr
 from bson import ObjectId
@@ -68,12 +67,12 @@ class UpdateStudentModel(BaseModel):
         }
 
 
-@app.post("/", response_description="Add new student", response_model=StudentModel)
+@app.post("/", response_description="Add new student", response_model=StudentModel, status_code=status.HTTP_201_CREATED)
 async def create_student(student: StudentModel = Body(...)):
     student = jsonable_encoder(student)
     new_student = await db["students"].insert_one(student)
     created_student = await db["students"].find_one({"_id": new_student.inserted_id})
-    return JSONResponse(status_code=status.HTTP_201_CREATED, content=created_student)
+    return created_student
 
 
 @app.get(
@@ -113,11 +112,11 @@ async def update_student(id: str, student: UpdateStudentModel = Body(...)):
     raise HTTPException(status_code=404, detail=f"Student {id} not found")
 
 
-@app.delete("/{id}", response_description="Delete a student")
+@app.delete("/{id}", response_description="Delete a student", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_student(id: str):
     delete_result = await db["students"].delete_one({"_id": id})
 
     if delete_result.deleted_count == 1:
-        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
+        return
 
     raise HTTPException(status_code=404, detail=f"Student {id} not found")
