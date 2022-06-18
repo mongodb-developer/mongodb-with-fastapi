@@ -86,19 +86,19 @@ async def list_students():
 @app.get(
     "/{id}", response_description="Get a single student", response_model=StudentModel
 )
-async def show_student(id: str):
-    if (student := await db["students"].find_one({"_id": ObjectId(id)})) is not None:
+async def show_student(id: PyObjectId):
+    if (student := await db["students"].find_one({"_id": id})) is not None:
         return student
 
     raise HTTPException(status_code=404, detail=f"Student {id} not found")
 
 
 @app.put("/{id}", response_description="Update a student", response_model=StudentModel)
-async def update_student(id: str, student: UpdateStudentModel = Body(...)):
+async def update_student(id: PyObjectId, student: UpdateStudentModel = Body(...)):
     student = {k: v for k, v in student.dict().items() if v is not None}
 
     if len(student) >= 1:
-        update_result = await db["students"].update_one({"_id": ObjectId(id)}, {"$set": student})
+        update_result = await db["students"].update_one({"_id": id}, {"$set": student})
 
         if update_result.modified_count == 1:
             if (
@@ -106,15 +106,15 @@ async def update_student(id: str, student: UpdateStudentModel = Body(...)):
             ) is not None:
                 return updated_student
 
-    if (existing_student := await db["students"].find_one({"_id": ObjectId(id)})) is not None:
+    if (existing_student := await db["students"].find_one({"_id": id})) is not None:
         return existing_student
 
     raise HTTPException(status_code=404, detail=f"Student {id} not found")
 
 
 @app.delete("/{id}", response_description="Delete a student", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_student(id: str):
-    delete_result = await db["students"].delete_one({"_id": ObjectId(id)})
+async def delete_student(id: PyObjectId):
+    delete_result = await db["students"].delete_one({"_id": id})
 
     if delete_result.deleted_count == 1:
         return
