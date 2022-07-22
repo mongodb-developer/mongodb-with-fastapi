@@ -1,6 +1,6 @@
 import os
 from fastapi import FastAPI, Body, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import Response, JSONResponse
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel, Field, EmailStr
 from bson import ObjectId
@@ -118,6 +118,6 @@ async def delete_student(id: str):
     delete_result = await db["students"].delete_one({"_id": id})
 
     if delete_result.deleted_count == 1:
-        return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     raise HTTPException(status_code=404, detail=f"Student {id} not found")
