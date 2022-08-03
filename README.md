@@ -21,6 +21,6 @@ uvicorn app:app --reload
 
 (Check out [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) if you need a MongoDB database.)
 
-Now you can load http://localhost:8000 in your browser ... but there won't be much to see until you've inserted some data.
+Now you can load http://localhost:8000/docs in your browser ... but there won't be much to see until you've inserted some data.
 
 If you have any questions or suggestions, check out the [MongoDB Community Forums](https://developer.mongodb.com/community/forums/)!
