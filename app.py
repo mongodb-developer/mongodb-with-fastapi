@@ -1,121 +1,187 @@
 import os
-from fastapi import FastAPI, Body, HTTPException, status
-from fastapi.responses import Response, JSONResponse
-from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel, Field, EmailStr
-from bson import ObjectId
 from typing import Optional, List
-import motor.motor_asyncio
 
-app = FastAPI()
+from fastapi import FastAPI, Body, HTTPException, status
+from fastapi.responses import Response
+from pydantic import ConfigDict, BaseModel, Field, EmailStr
+from pydantic.functional_validators import BeforeValidator
+
+from typing_extensions import Annotated
+
+from bson import ObjectId
+import motor.motor_asyncio
+from pymongo import ReturnDocument
+
+
+app = FastAPI(
+    title="Student Course API",
+    summary="A sample application showing how to use FastAPI to add a ReST API to a MongoDB collection.",
+)
 client = motor.motor_asyncio.AsyncIOMotorClient(os.environ["MONGODB_URL"])
 db = client.college
+student_collection = db.get_collection("students")
 
-
-class PyObjectId(ObjectId):
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid objectid")
-        return ObjectId(v)
-
-    @classmethod
-    def __modify_schema__(cls, field_schema):
-        field_schema.update(type="string")
+# Represents an ObjectId field in the database.
+# It will be represented as a `str` on the model so that it can be serialized to JSON.
+PyObjectId = Annotated[str, BeforeValidator(str)]
 
 
 class StudentModel(BaseModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    """
+    Container for a single student record.
+    """
+
+    # The primary key for the StudentModel, stored as a `str` on the instance.
+    # This will be aliased to `_id` when sent to MongoDB,
+    # but provided as `id` in the API requests and responses.
+    id: Optional[PyObjectId] = Field(alias="_id", default=None)
     name: str = Field(...)
     email: EmailStr = Field(...)
     course: str = Field(...)
     gpa: float = Field(..., le=4.0)
-
-    class Config:
-        allow_population_by_field_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
-        schema_extra = {
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_schema_extra={
             "example": {
                 "name": "Jane Doe",
                 "email": "jdoe@example.com",
                 "course": "Experiments, Science, and Fashion in Nanophotonics",
-                "gpa": "3.0",
+                "gpa": 3.0,
             }
-        }
+        },
+    )
 
 
 class UpdateStudentModel(BaseModel):
-    name: Optional[str]
-    email: Optional[EmailStr]
-    course: Optional[str]
-    gpa: Optional[float]
+    """
+    A set of optional updates to be made to a document in the database.
+    """
 
-    class Config:
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
-        schema_extra = {
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    course: Optional[str] = None
+    gpa: Optional[float] = None
+    model_config = ConfigDict(
+        arbitrary_types_allowed=True,
+        json_encoders={ObjectId: str},
+        json_schema_extra={
             "example": {
                 "name": "Jane Doe",
                 "email": "jdoe@example.com",
                 "course": "Experiments, Science, and Fashion in Nanophotonics",
-                "gpa": "3.0",
+                "gpa": 3.0,
             }
-        }
+        },
+    )
 
 
-@app.post("/", response_description="Add new student", response_model=StudentModel)
+class StudentCollection(BaseModel):
+    """
+    A container holding a list of `StudentModel` instances.
+
+    This exists because providing a top-level array in a JSON response can be a [vulnerability](https://haacked.com/archive/2009/06/25/json-hijacking.aspx/)
+    """
+
+    students: List[StudentModel]
+
+
+@app.post(
+    "/students/",
+    response_description="Add new student",
+    response_model=StudentModel,
+    status_code=status.HTTP_201_CREATED,
+    response_model_by_alias=False,
+)
 async def create_student(student: StudentModel = Body(...)):
-    student = jsonable_encoder(student)
-    new_student = await db["students"].insert_one(student)
-    created_student = await db["students"].find_one({"_id": new_student.inserted_id})
-    return JSONResponse(status_code=status.HTTP_201_CREATED, content=created_student)
+    """
+    Insert a new student record.
+
+    A unique `id` will be created and provided in the response.
+    """
+    new_student = await student_collection.insert_one(
+        student.model_dump(by_alias=True, exclude=["id"])
+    )
+    created_student = await student_collection.find_one(
+        {"_id": new_student.inserted_id}
+    )
+    return created_student
 
 
 @app.get(
-    "/", response_description="List all students", response_model=List[StudentModel]
+    "/students/",
+    response_description="List all students",
+    response_model=StudentCollection,
+    response_model_by_alias=False,
 )
 async def list_students():
-    students = await db["students"].find().to_list(1000)
-    return students
+    """
+    List all of the student data in the database.
+
+    The response is unpaginated and limited to 1000 results.
+    """
+    return StudentCollection(students=await student_collection.find().to_list(1000))
 
 
 @app.get(
-    "/{id}", response_description="Get a single student", response_model=StudentModel
+    "/students/{id}",
+    response_description="Get a single student",
+    response_model=StudentModel,
+    response_model_by_alias=False,
 )
 async def show_student(id: str):
-    if (student := await db["students"].find_one({"_id": id})) is not None:
+    """
+    Get the record for a specific student, looked up by `id`.
+    """
+    if (
+        student := await student_collection.find_one({"_id": ObjectId(id)})
+    ) is not None:
         return student
 
     raise HTTPException(status_code=404, detail=f"Student {id} not found")
 
 
-@app.put("/{id}", response_description="Update a student", response_model=StudentModel)
+@app.put(
+    "/students/{id}",
+    response_description="Update a student",
+    response_model=StudentModel,
+    response_model_by_alias=False,
+)
 async def update_student(id: str, student: UpdateStudentModel = Body(...)):
-    student = {k: v for k, v in student.dict().items() if v is not None}
+    """
+    Update individual fields of an existing student record.
+
+    Only the provided fields will be updated.
+    Any missing or `null` fields will be ignored.
+    """
+    student = {
+        k: v for k, v in student.model_dump(by_alias=True).items() if v is not None
+    }
 
     if len(student) >= 1:
-        update_result = await db["students"].update_one({"_id": id}, {"$set": student})
+        update_result = await student_collection.find_one_and_update(
+            {"_id": ObjectId(id)},
+            {"$set": student},
+            return_document=ReturnDocument.AFTER,
+        )
+        if update_result is not None:
+            return update_result
+        else:
+            raise HTTPException(status_code=404, detail=f"Student {id} not found")
 
-        if update_result.modified_count == 1:
-            if (
-                updated_student := await db["students"].find_one({"_id": id})
-            ) is not None:
-                return updated_student
-
-    if (existing_student := await db["students"].find_one({"_id": id})) is not None:
+    # The update is empty, but we should still return the matching document:
+    if (existing_student := await student_collection.find_one({"_id": id})) is not None:
         return existing_student
 
     raise HTTPException(status_code=404, detail=f"Student {id} not found")
 
 
-@app.delete("/{id}", response_description="Delete a student")
+@app.delete("/students/{id}", response_description="Delete a student")
 async def delete_student(id: str):
-    delete_result = await db["students"].delete_one({"_id": id})
+    """
+    Remove a single student record from the database.
+    """
+    delete_result = await student_collection.delete_one({"_id": ObjectId(id)})
 
     if delete_result.deleted_count == 1:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
