@@ -27,6 +27,10 @@ PyObjectId = Annotated[str, BeforeValidator(str)]
 
 
 class StudentModel(BaseModel):
+    """
+    Container for a single student record.
+    """
+
     # The primary key for the StudentModel, stored as a `str` on the instance.
     # This will be aliased to `_id` when sent to MongoDB,
     # but provided as `id` in the API requests and responses.
