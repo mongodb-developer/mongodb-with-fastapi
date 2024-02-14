@@ -3,6 +3,8 @@
 This is a small sample project demonstrating how to build an API with [MongoDB](https://developer.mongodb.com/) and [FastAPI](https://fastapi.tiangolo.com/).
 It was written to accompany a [blog post](https://developer.mongodb.com/quickstart/python-quickstart-fastapi/) - you should go read it!
 
+If you want to fastrack your project even further, check out the [MongoDB FastAPI app generator](https://github.com/mongodb-labs/full-stack-fastapi-mongodb) and eliminate much of the boilerplate of getting started.
+
 ## TL;DR
 
 If you really don't want to read the [blog post](https://developer.mongodb.com/quickstart/python-quickstart-fastapi/) and want to get up and running,
