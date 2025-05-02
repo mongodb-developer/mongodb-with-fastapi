@@ -17,6 +17,9 @@ pip install -r requirements.txt
 # Configure the location of your MongoDB database:
 export MONGODB_URL="mongodb+srv://<username>:<password>@<url>/<db>?retryWrites=true&w=majority"
 
+# sgku:
+export MONGODB_URL="mongodb+srv://sgku:sgku123@cluster0.gnctl.mongodb.net/?retryWrites=true&w=majority"
+
 # Start the service:
 uvicorn app:app --reload
 ```
