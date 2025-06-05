@@ -9,7 +9,8 @@ from pydantic.functional_validators import BeforeValidator
 from typing_extensions import Annotated
 
 from bson import ObjectId
-import motor.motor_asyncio
+import asyncio
+from pymongo import AsyncMongoClient
 from pymongo import ReturnDocument
 
 
@@ -17,7 +18,7 @@ app = FastAPI(
     title="Student Course API",
     summary="A sample application showing how to use FastAPI to add a ReST API to a MongoDB collection.",
 )
-client = motor.motor_asyncio.AsyncIOMotorClient(os.environ["MONGODB_URL"])
+client = AsyncMongoClient(os.environ["MONGODB_URL"])
 db = client.college
 student_collection = db.get_collection("students")
 
