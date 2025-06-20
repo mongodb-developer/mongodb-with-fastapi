@@ -100,13 +100,11 @@ async def create_student(student: StudentModel = Body(...)):
 
     A unique `id` will be created and provided in the response.
     """
-    new_student = await student_collection.insert_one(
-        student.model_dump(by_alias=True, exclude=["id"])
-    )
-    created_student = await student_collection.find_one(
-        {"_id": new_student.inserted_id}
-    )
-    return created_student
+    new_student = student.model_dump(by_alias=True, exclude=["id"])
+    result = await student_collection.insert_one(new_student)
+    new_student["_id"] = result.inserted_id
+
+    return new_student
 
 
 @app.get(
