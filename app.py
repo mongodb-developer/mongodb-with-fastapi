@@ -9,16 +9,17 @@ from pydantic.functional_validators import BeforeValidator
 from typing_extensions import Annotated
 
 from bson import ObjectId
-import asyncio
+import pymongo
 from pymongo import AsyncMongoClient
 from pymongo import ReturnDocument
+from pymongo.server_api import ServerApi
 
 
 app = FastAPI(
     title="Student Course API",
     summary="A sample application showing how to use FastAPI to add a ReST API to a MongoDB collection.",
 )
-client = AsyncMongoClient(os.environ["MONGODB_URL"])
+client = AsyncMongoClient(os.environ["MONGODB_URL"],server_api=pymongo.server_api.ServerApi(version="1", strict=True,deprecation_errors=True))
 db = client.college
 student_collection = db.get_collection("students")
 
@@ -100,13 +101,11 @@ async def create_student(student: StudentModel = Body(...)):
 
     A unique `id` will be created and provided in the response.
     """
-    new_student = await student_collection.insert_one(
-        student.model_dump(by_alias=True, exclude=["id"])
-    )
-    created_student = await student_collection.find_one(
-        {"_id": new_student.inserted_id}
-    )
-    return created_student
+    new_student = student.model_dump(by_alias=True, exclude=["id"])
+    result = await student_collection.insert_one(new_student)
+    new_student["_id"] = result.inserted_id
+
+    return new_student
 
 
 @app.get(
